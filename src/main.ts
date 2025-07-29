@@ -29,9 +29,9 @@ async function bootstrap() {
     validationError: { target: false }
   }));
   console.log('JWT_SECRET:', process.env.JWT_SECRET);
-  // CORS
+
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: 'https://lavanda-ptz.onrender.com',
     credentials: true,
   });
 
@@ -59,7 +59,7 @@ async function bootstrap() {
   });
 
 
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   await app.listen(port);
 
   console.log(`Application is running on: http://localhost:${port}`);
