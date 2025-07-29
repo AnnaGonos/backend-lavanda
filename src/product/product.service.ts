@@ -18,8 +18,29 @@ export class ProductService {
     return await this.productRepository.save(product);
   }
 
-  async findAll(): Promise<Product[]> {
-    return await this.productRepository.find();
+  async findAll(page: number = 1, limit: number = 20, filter?: 'active' | 'archived' | 'all'): Promise<{ products: Product[]; total: number; page: number; limit: number; totalPages: number }> {
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.productRepository.createQueryBuilder('product');
+
+    if (filter === 'active') {
+      queryBuilder.andWhere('product.stock > 0');
+    } else if (filter === 'archived') {
+      queryBuilder.andWhere('product.stock = 0');
+    }
+
+    const [products, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      products,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number): Promise<Product> {

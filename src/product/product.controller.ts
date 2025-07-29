@@ -10,7 +10,7 @@ import {
   UploadedFile,
   ParseIntPipe,
   UseGuards,
-  Request, UsePipes, ValidationPipe,
+  Request, UsePipes, ValidationPipe, Query, DefaultValuePipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductService } from './product.service';
@@ -69,8 +69,13 @@ export class ProductController {
   @Get('/')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.FLORIST)
-  findAll() {
-    return this.productService.findAll();
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('filter') filter?: 'active' | 'archived' | 'all',
+  ) {
+    const safeLimit = limit > 100 ? 100 : limit;
+    return this.productService.findAll(page, safeLimit, filter);
   }
 
   // @Get('/archived')

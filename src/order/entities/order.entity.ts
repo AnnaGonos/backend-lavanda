@@ -10,6 +10,7 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { OrderItem } from './order-item.entity';
 import { Payment } from '../../payment/entities/payment.entity';
+import { OrderStatus } from './order-status.enum';
 
 @Entity()
 export class Order {
@@ -22,7 +23,6 @@ export class Order {
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  // Способ доставки
   @Column({
     type: 'enum',
     enum: ['доставка', 'самовывоз'],
@@ -30,23 +30,18 @@ export class Order {
   })
   deliveryMethod: 'доставка' | 'самовывоз';
 
-  // Комментарий к заказу
   @Column({ type: 'text', nullable: true })
   comment?: string;
 
-  // Имя получателя
   @Column({ type: 'text', nullable: true })
   recipientName?: string;
 
-  // Телефон получателя
   @Column({ type: 'varchar', length: 20, nullable: true })
   recipientPhone?: string;
 
-  // Адрес доставки
   @Column({ type: 'text', nullable: true })
   deliveryAddress?: string;
 
-  // Время доставки - формат даты: YYYY-MM-DD
   @Column({ type: 'date', nullable: false })
   deliveryDate: Date;
 
@@ -57,32 +52,16 @@ export class Order {
   })
   deliveryPeriod: 'утро' | 'день' | 'вечер';
 
-  // Сумма заказа
   @Column({ type: 'float', nullable: false })
   totalAmount: number;
 
-  // Статус заказа
   @Column({
     type: 'enum',
-    enum: [
-      'created',
-      'processing',
-      'paid',
-      'shipped',
-      'completed',
-      'cancelled',
-    ],
-    default: 'created',
+    enum: OrderStatus,
+    default: OrderStatus.CREATED,
   })
-  status:
-    | 'created'
-    | 'processing'
-    | 'paid'
-    | 'shipped'
-    | 'completed'
-    | 'cancelled';
+  status: OrderStatus;
 
-  // Пользователь
   @ManyToOne(() => User, (user) => user.orders)
   user: User;
 
@@ -91,7 +70,6 @@ export class Order {
   })
   items: OrderItem[];
 
-  // Связь с оплатой
   @OneToOne(() => Payment, (payment) => payment.order, {
     nullable: true,
     onDelete: 'SET NULL',

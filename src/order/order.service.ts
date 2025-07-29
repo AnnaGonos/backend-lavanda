@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
@@ -9,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { Product } from '../productpublic/entities/product.entity';
 import { Payment } from '../payment/entities/payment.entity';
+import { OrderStatus } from './entities/order-status.enum';
 
 @Injectable()
 export class OrderService {
@@ -73,7 +74,7 @@ export class OrderService {
       deliveryDate: orderData.deliveryDate,
       deliveryPeriod: orderData.deliveryPeriod,
       totalAmount,
-      status: 'created',
+      status: OrderStatus.CREATED,
       user,
     });
 
@@ -125,21 +126,19 @@ export class OrderService {
 
     await this.userRepository.save(user);
 
-    // Уменьшаем остатки
     for (const cartItem of cartItems) {
       const product = cartItem.product;
       product.stock -= cartItem.quantity;
       await this.productRepository.save(product);
     }
 
-    // Очищаем корзину
     await this.cartRepository.remove(cartItems);
 
     savedOrder.items = orderItemsToSave;
     return savedOrder;
   }
 
-  // Генерация номера заказа: 250423-001
+  // прим: 250423-001
   private async generateOrderNumber(): Promise<string> {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
@@ -157,16 +156,25 @@ export class OrderService {
     return `${datePrefix}-${number}`;
   }
 
-  // Получить все заказы пользователя
-  async getOrdersByUser(userId: number) {
-    return await this.orderRepository.find({
+  async getOrdersByUser(userId: number, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [orders, total] = await this.orderRepository.findAndCount({
       where: { user: { id: userId } },
       relations: ['items', 'items.product', 'payment'],
       order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
     });
+
+    return {
+      orders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  // Получить заказ по ID (с проверкой доступа)
   async getOrderById(orderId: number, userId: number) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
@@ -177,5 +185,116 @@ export class OrderService {
     if (order.user.id !== userId) throw new Error('Нет доступа к заказу');
 
     return order;
+  }
+
+  async getAllOrders() {
+    return await this.orderRepository.find({
+      relations: ['items', 'items.product', 'payment', 'user'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getOrderByIdAdmin(orderId: number) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['items', 'items.product', 'payment', 'user'],
+    });
+
+    if (!order) {
+      throw new Error('Заказ не найден');
+    }
+
+    return order;
+  }
+
+  async getOrdersWithPagination(
+    page: number = 1,
+    limit: number = 20,
+    status?: string,
+    deliveryDateFrom?: string,
+    deliveryDateTo?: string,
+    sortBy: 'createdAt' | 'deliveryDate' = 'createdAt',
+    sortOrder: 'ASC' | 'DESC' = 'DESC'
+  ) {
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.orderRepository.createQueryBuilder('order');
+    queryBuilder.leftJoinAndSelect('order.user', 'user');
+    queryBuilder.leftJoinAndSelect('order.items', 'items');
+    queryBuilder.leftJoinAndSelect('items.product', 'product');
+
+    if (status) {
+      queryBuilder.andWhere('order.status = :status', { status });
+    }
+
+    if (deliveryDateFrom || deliveryDateTo) {
+      if (deliveryDateFrom && deliveryDateTo) {
+        queryBuilder.andWhere('order.deliveryDate BETWEEN :dateFrom AND :dateTo', {
+          dateFrom: deliveryDateFrom,
+          dateTo: deliveryDateTo,
+        });
+      } else if (deliveryDateFrom) {
+        queryBuilder.andWhere('order.deliveryDate >= :dateFrom', {
+          dateFrom: deliveryDateFrom,
+        });
+      } else if (deliveryDateTo) {
+        queryBuilder.andWhere('order.deliveryDate <= :dateTo', {
+          dateTo: deliveryDateTo,
+        });
+      }
+    }
+
+    const allowedSortFields: (keyof Order)[] = ['createdAt', 'deliveryDate'];
+    const orderField = allowedSortFields.includes(sortBy) ? `order.${sortBy}` : 'order.createdAt';
+
+    queryBuilder.orderBy(orderField, sortOrder);
+
+    const [orders, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      orders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+
+  async updateOrderStatus(orderId: number, newStatus: OrderStatus) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['user']
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Заказ с ID ${orderId} не найден`);
+    }
+
+    const isValidTransition = this.isValidStatusTransition(order.status, newStatus);
+
+    if (!isValidTransition) {
+      throw new ForbiddenException(
+        `Недопустимый переход статуса: из "${order.status}" в "${newStatus}"`
+      );
+    }
+
+    order.status = newStatus;
+    return this.orderRepository.save(order);
+  }
+
+  private isValidStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): boolean {
+    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.ASSEMBLED, OrderStatus.CANCELLED],
+      [OrderStatus.ASSEMBLED]: [OrderStatus.COMPLETED],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CANCELLED]: []
+    };
+
+    return allowedTransitions[currentStatus]?.includes(newStatus) || false;
   }
 }
