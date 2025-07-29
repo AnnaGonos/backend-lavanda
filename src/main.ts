@@ -31,8 +31,13 @@ async function bootstrap() {
   console.log('JWT_SECRET:', process.env.JWT_SECRET);
 
   app.enableCors({
-    origin: 'https://lavanda-ptz.onrender.com',
+    origin: [
+      'http://localhost:3000',
+      'https://lavanda-ptz.onrender.com',
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const config = new DocumentBuilder()
