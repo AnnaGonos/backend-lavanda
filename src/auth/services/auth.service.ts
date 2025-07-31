@@ -6,7 +6,6 @@ import { RegisterDto } from '../dto/register.dto';
 import * as bcrypt from 'bcryptjs';
 import { UserRole } from '../../user/entities/user-role.enum';
 import { JwtService } from '@nestjs/jwt';
-import { SmsService } from './sms.service';
 
 @Injectable()
 export class AuthService {
