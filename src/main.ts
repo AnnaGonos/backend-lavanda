@@ -13,8 +13,6 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   dotenv.config({ path: join(__dirname, '..', '.env') });
-
-
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
@@ -29,7 +27,7 @@ async function bootstrap() {
       'https://lavanda-ptz.onrender.com',
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
