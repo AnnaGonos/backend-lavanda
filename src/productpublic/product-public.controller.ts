@@ -1,8 +1,8 @@
 import {
   Controller,
   Get,
-  Param,Request,
-  ParseIntPipe
+  Param, Request,
+  ParseIntPipe, Query,
 } from '@nestjs/common';
 import { ProductPublicService } from './product-public.service';
 
@@ -12,9 +12,20 @@ export class ProductPublicController {
     private readonly productPublicService: ProductPublicService,
   ) {}
 
-  @Get('/')
-  findAll() {
-    return this.productPublicService.findAll();
+
+  @Get()
+  async findAll(
+    @Query('category') category?: string,
+    @Query('sort') sort?: 'price:asc' | 'price:desc',
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.productPublicService.findAll({
+      category: category as any,
+      sort,
+      limit: limit ? +limit : undefined,
+      offset: offset ? +offset : undefined,
+    });
   }
 
   @Get('/:id')
