@@ -33,7 +33,7 @@ export class User {
   @Column({ default: 0, type: 'float' })
   bonusPoints: number;
 
-  @Column({ default: 2 })
+  @Column({ default: 1 })
   bonusCardLevel: number;
 
   @Column({ default: 0, type: 'int' })

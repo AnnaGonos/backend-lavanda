@@ -38,6 +38,13 @@ export class UserController {
     return await this.userService.findAll();
   }
 
+  @Get('staff')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async getStaff(@Request() req): Promise<User[]> {
+    return await this.userService.getStaff();
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<User> {
     return this.userService.findOneById(id);

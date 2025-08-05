@@ -6,7 +6,6 @@ export class Payment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // ✅ Сумма платежа
   @Column({ type: 'int', nullable: false })
   amount: number;
 
@@ -26,7 +25,6 @@ export class Payment {
   })
   method: 'cash' | 'yookassa';
 
-  // Связь с заказом
   @OneToOne(() => Order, (order) => order.payment, { onDelete: 'CASCADE' })
   @JoinColumn()
   order: Order;

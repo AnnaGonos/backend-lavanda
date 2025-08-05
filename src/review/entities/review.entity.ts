@@ -16,7 +16,7 @@ export class Review {
   id: number;
 
   @Column({ type: 'smallint', nullable: false })
-  rating: number; // Оценка от 1 до 5
+  rating: number;
 
   @Column({ type: 'text', nullable: true })
   description?: string;

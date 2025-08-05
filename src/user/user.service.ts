@@ -28,6 +28,16 @@ export class UserService {
     return await this.userRepository.findOneBy({ phone });
   }
 
+  async getStaff(): Promise<User[]> {
+    return await this.userRepository.find({
+      where: [
+        { role: UserRole.ADMIN },
+        { role: UserRole.FLORIST },
+      ],
+      // select: ['id', 'firstName', 'lastName', 'phone', 'email', 'role', 'bonusPoints', 'totalOrders', 'createdAt'],
+    });
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOneById(id);
 
