@@ -25,6 +25,14 @@ export class ReviewService {
     const author = await this.userRepository.findOneBy({ id: authorId });
     if (!author) throw new Error('Пользователь не найден');
 
+    const existingReview = await this.reviewRepository.findOne({
+      where: { product: { id: productId }, author: { id: authorId } },
+    });
+
+    if (existingReview) {
+      throw new Error('Вы уже оценили этот товар');
+    }
+
     const review = this.reviewRepository.create({
       rating,
       description,
@@ -38,6 +46,14 @@ export class ReviewService {
 
   async findAll(): Promise<Review[]> {
     return await this.reviewRepository.find({
+      relations: ['author', 'product'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findByProduct(productId: number): Promise<Review[]> {
+    return await this.reviewRepository.find({
+      where: { product: { id: productId } },
       relations: ['author', 'product'],
       order: { createdAt: 'DESC' },
     });

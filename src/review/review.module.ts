@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
   controllers: [ReviewController],
   providers: [ReviewService,
     ProductService,
-    CloudService, JwtAuthGuard
+    CloudService
   ],
 })
 export class ReviewModule {}

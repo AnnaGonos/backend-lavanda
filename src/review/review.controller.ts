@@ -11,7 +11,7 @@ import {
   UseGuards,
   Request,
   UsePipes,
-  ValidationPipe,
+  ValidationPipe, Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReviewService } from './review.service';
@@ -53,7 +53,13 @@ export class ReviewController {
   }
 
   @Get()
-  findAll() {
+  async findAll(@Query() query: { productId?: string }) {
+    const { productId } = query;
+
+    if (productId) {
+      return this.reviewService.findByProduct(+productId);
+    }
+
     return this.reviewService.findAll();
   }
 
